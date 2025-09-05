@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>SmartAssign — Assignment Manager</title>
+
+<style>
+  :root{
+    --bg:#0b1020;
+    --card:#121831;
+    --muted:#8b95b5;
+    --text:#e8ecff;
+    --primary:#6b8afd;  /* cornflower-ish */
+    --primary-600:#4f6ffd;
+    --accent:#22d3ee;   /* cyan */
+    --ok:#22c55e;
+    --warn:#f59e0b;
+    --danger:#ef4444;
+    --border:rgba(255,255,255,.08);
+    --shadow:0 10px 30px rgba(0,0,0,.35);
+    --radius:16px;
+  }
+
+  /* Layout */
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; font-family: ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;
+    color:var(--text); background:
+      radial-gradient(1000px 600px at -10% -10%, rgba(107,138,253,.20), transparent 60%),
+      radial-gradient(800px 600px at 110% 0%, rgba(34,211,238,.18), transparent 60%),
+      linear-gradient(180deg, #0b1020 0%, #0b1020 100%);
+    background-color:var(--bg);
+  }
+
+  .container{max-width:980px;margin:0 auto;padding:24px}
+  header{
+    position:sticky;top:0;z-index:5;
+    background:rgba(11,16,32,.6); backdrop-filter: blur(8px);
+    border-bottom:1px solid var(--border);
+  }
+  .nav{
+    max-width:980px;margin:0 auto;display:flex;align-items:center;gap:12px;
+    padding:14px 24px;
+  }
+  .brand{
+    display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.2px;
+  }
+  .brand .logo{
+    width:32px;height:32px;border-radius:10px;
+    background:linear-gradient(135deg,var(--primary),var(--accent));
+    box-shadow:0 6px 18px rgba(107,138,253,.38);
+  }
+  .grow{flex:1}
+  .role-pill{
+    font-size:.78rem;padding:6px 10px;border-radius:999px;border:1px solid var(--border);
+    color:var(--muted); background:rgba(255,255,255,.03)
+  }
+
+  /* Cards & sections */
+  .grid{display:grid;gap:18px}
+  @media(min-width:920px){ .grid-2{grid-template-columns:1fr 1.5fr} }
+
+  .card{
+    background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.00));
+    border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow);
+    padding:18px;
+  }
+  .card h2{margin:0 0 10px;font-size:1.2rem}
+  .subtle{color:var(--muted);font-size:.95rem}
+
+  /* Forms */
+  label{display:block;font-size:.85rem;color:var(--muted);margin:10px 0 6px}
+  input,select,textarea,button{
+    width:100%; font:inherit; color:var(--text);
+  }
+  input,select,textarea{
+    background:#0e1530;border:1px solid var(--border);border-radius:12px;
+    padding:12px 14px; outline:none; transition:border .2s, box-shadow .2s;
+  }
+  input:focus,select:focus,textarea:focus{
+    border-color:rgba(107,138,253,.6);
+    box-shadow:0 0 0 4px rgba(107,138,253,.2);
+  }
+  textarea{min-height:88px;resize:vertical}
+
+  .btn{
+    background:linear-gradient(180deg,var(--primary),var(--primary-600));
+    border:none;border-radius:12px;padding:12px 14px;font-weight:600;cursor:pointer;
+    box-shadow:0 10px 20px rgba(107,138,253,.25);
+  }
+  .btn:hover{filter:brightness(1.05)}
+  .btn-outline{
+    background:transparent;border:1px solid var(--border);border-radius:12px;
+    padding:12px 14px;font-weight:600;cursor:pointer;color:var(--text)
+  }
+  .btn-row{display:flex;gap:10px;flex-wrap:wrap}
+
+  /* Assignment boxes */
+  .assignment{
+    border:1px solid var(--border);border-radius:12px;padding:14px;margin:12px 0;
+    background:rgba(255,255,255,.02)
+  }
+  .assignment .title{font-weight:700}
+  .meta{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0 10px}
+  .badge{
+    display:inline-flex;align-items:center;gap:6px;
+    font-size:.78rem;padding:6px 10px;border-radius:999px;border:1px solid var(--border);
+    color:var(--muted); background:rgba(255,255,255,.03)
+  }
+  .badge.deadline{color:#ffedd5;border-color:rgba(245,158,11,.35)}
+  .badge.submitted{color:#dcfce7;border-color:rgba(34,197,94,.35)}
+  .badge.pending{color:#fde68a;border-color:rgba(245,158,11,.35)}
+  .badge.secure{color:#cffafe;border-color:rgba(34,211,238,.35)}
+
+  .kv{display:grid;grid-template-columns:110px 1fr;gap:8px;align-items:start}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{
+    font-size:.8rem;padding:6px 8px;border-radius:999px;background:#0e1530;border:1px solid var(--border);
+    color:var(--text)
+  }
+
+  .divider{height:1px;background:var(--border);margin:12px 0}
+
+  .right{ text-align:right }
+
+  /* Helper for long content */
+  .wrap{
+    word-break:break-word; white-space:pre-wrap;
+  }
+
+  /* Links */
+  .file-link{color:var(--accent);text-decoration:none;border-bottom:1px dashed rgba(34,211,238,.5)}
+  .file-link:hover{opacity:.85}
+
+  /* Hide/Show */
+  .hidden{display:none}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="nav">
+    <div class="brand">
+      <div class="logo"></div>
+      <div>SmartAssign</div>
+    </div>
+    <div class="grow"></div>
+    <div id="navRole" class="role-pill">Not signed in</div>
+    <button id="navLogout" class="btn-outline hidden" onclick="logout()">Logout</button>
+  </div>
+</header>
+
+<main class="container grid">
+  <!-- Auth Card -->
+  <section id="auth" class="card">
+    <div id="loginForm">
+      <h2>Welcome back 👋</h2>
+      <p class="subtle">Login to continue</p>
+      <label>Email</label>
+      <input id="loginEmail" type="email" placeholder="you@college.edu"/>
+      <label>Password</label>
+      <input id="loginPass" type="password" placeholder="••••••••"/>
+      <div class="btn-row">
+        <button class="btn" onclick="login()">Login</button>
+        <button class="btn-outline" onclick="toggleAuth('signup')">Create account</button>
+      </div>
+      <p class="subtle" style="margin-top:8px">Demo: student@test.com / 123 &nbsp;|&nbsp; teacher@test.com / 123</p>
+    </div>
+
+    <div id="signupForm" class="hidden">
+      <h2>Create account ✨</h2>
+      <p class="subtle">Choose role and set password</p>
+      <label>Email</label>
+      <input id="signupEmail" type="email" placeholder="you@college.edu"/>
+      <label>Password</label>
+      <input id="signupPass" type="password" placeholder="minimum 3 chars for demo"/>
+      <label>Role</label>
+      <select id="signupRole">
+        <option value="student">Student</option>
+        <option value="teacher">Teacher</option>
+      </select>
+      <div class="btn-row">
+        <button class="btn" onclick="signup()">Sign up</button>
+        <button class="btn-outline" onclick="toggleAuth('login')">Back to login</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Student Dashboard -->
+  <section id="studentDash" class="card hidden">
+    <h2>Student Dashboard</h2>
+    <p class="subtle">Upload your assignment PDFs, then track marks, grade, and feedback.</p>
+    <div id="studentAssignments"></div>
+  </section>
+
+  <!-- Teacher Dashboard -->
+  <section id="teacherDash" class="grid grid-2 hidden">
+    <!-- Create -->
+    <div class="card">
+      <h2>Create Assignment</h2>
+      <p class="subtle">Set the title, deadline, and number of questions.</p>
+      <label>Title</label>
+      <input id="aTitle" placeholder="e.g., DS Unit 2 – Sorting" />
+      <label>Deadline</label>
+      <input id="aDeadline" type="date" />
+      <label>Number of Questions</label>
+      <input id="aNumQ" type="number" min="1" placeholder="e.g., 5" />
+      <div class="btn-row">
+        <button class="btn" onclick="createAssignment()">Add Assignment</button>
+      </div>
+    </div>
+
+    <!-- Submissions -->
+    <div class="card">
+      <h2>Submissions</h2>
+      <p class="subtle">Grade question-wise, assign a letter grade, and leave feedback.</p>
+      <div id="teacherSubs"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+const API="http://localhost:4000/api";
+let currentUser=null;
+
+/* ---------- UI helpers ---------- */
+function setNav(roleText, loggedIn){
+  const pill=document.getElementById('navRole');
+  const lo=document.getElementById('navLogout');
+  pill.textContent = roleText || 'Not signed in';
+  lo.classList.toggle('hidden', !loggedIn);
+}
+function toggleAuth(mode){
+  document.getElementById("loginForm").classList.toggle("hidden",mode==="signup");
+  document.getElementById("signupForm").classList.toggle("hidden",mode==="login");
+}
+
+/* ---------- Auth ---------- */
+async function login(){
+  const email=document.getElementById("loginEmail").value.trim();
+  const password=document.getElementById("loginPass").value.trim();
+  const res=await fetch(API+"/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password})});
+  const data=await res.json();
+  if(data.success){
+    currentUser={email:data.email,role:data.role};
+    document.getElementById("auth").classList.add("hidden");
+    setNav(`${data.role.toUpperCase()} • ${data.email}`, true);
+    if(data.role==="student") showStudent(); else showTeacher();
+  } else alert("Invalid login");
+}
+async function signup(){
+  const email=document.getElementById("signupEmail").value.trim();
+  const password=document.getElementById("signupPass").value.trim();
+  const role=document.getElementById("signupRole").value;
+  const res=await fetch(API+"/signup",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password,role})});
+  const data=await res.json();
+  if(data.success){ alert("Account created! Please login."); toggleAuth("login"); }
+  else alert("User already exists");
+}
+function logout(){
+  currentUser=null;
+  setNav('Not signed in', false);
+  document.getElementById("studentDash").classList.add("hidden");
+  document.getElementById("teacherDash").classList.add("hidden");
+  document.getElementById("auth").classList.remove("hidden");
+}
+
+/* ---------- Student ---------- */
+function prettyMarks(marks){
+  const entries = Object.entries(marks||{});
+  if(!entries.length) return '<span class="subtle">Not graded</span>';
+  return `<div class="chips">` + entries.map(([k,v])=>`<span class="chip">${k}: ${v}</span>`).join('') + `</div>`;
+}
+function fmtDate(iso){
+  try{ return new Date(iso).toLocaleString(); } catch{ return iso || ""; }
+}
+
+async function showStudent(){
+  document.getElementById("studentDash").classList.remove("hidden");
+  const resA=await fetch(API+"/assignments"); const assignments=await resA.json();
+  const resS=await fetch(API+"/submissions"); const subs=await resS.json();
+
+  setNav(`STUDENT • ${currentUser.email}`, true);
+
+  const wrap=document.getElementById("studentAssignments");
+  if(assignments.length===0){
+    wrap.innerHTML = `
+      <div class="assignment">
+        <div class="title">No assignments yet</div>
+        <div class="subtle">Your teacher hasn’t posted anything. Check back later.</div>
+      </div>`;
+    return;
+  }
+
+  let html="";
+  assignments.forEach(a=>{
+    const sub=subs.find(s=>s.assignmentId===a.id && s.student===currentUser.email);
+    html+=`<div class="assignment">
+      <div class="title">${a.title}</div>
+      <div class="meta">
+        <span class="badge deadline">Deadline: ${a.deadline || '-'}</span>
+        <span class="badge">Questions: ${a.numQuestions}</span>
+        ${sub ? `<span class="badge submitted">Submitted</span><span class="badge secure">Secured 🔒</span>` : `<span class="badge pending">Not submitted</span>`}
+      </div>`;
+
+    if(sub){
+      html+=`
+        <div class="kv">
+          <div class="subtle">File</div>
+          <div><a class="file-link" href="javascript:void(0)">${sub.filename}</a> <span class="subtle">(${fmtDate(sub.submittedAt)})</span></div>
+
+          <div class="subtle">Marks</div>
+          <div>${prettyMarks(sub.marks)}</div>
+
+          <div class="subtle">Grade</div>
+          <div><span class="chip">${sub.grade}</span></div>
+
+          <div class="subtle">Feedback</div>
+          <div class="wrap">${sub.feedback ? sub.feedback : '<span class="subtle">No feedback yet</span>'}</div>
+        </div>`;
+    } else {
+      html+=`
+        <label class="subtle">Upload PDF</label>
+        <input type="file" id="file${a.id}" accept=".pdf"/>
+        <div class="right"><button class="btn" onclick="uploadFile(${a.id})">Submit</button></div>
+      `;
+    }
+
+    html+=`</div>`;
+  });
+
+  wrap.innerHTML = html;
+}
+
+async function uploadFile(aid){
+  const inp=document.getElementById("file"+aid);
+  if(!inp.files[0]) return alert("Choose a PDF first");
+  const filename=inp.files[0].name;
+  await fetch(API+"/upload",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({student:currentUser.email,assignmentId:aid,filename})});
+  showStudent();
+}
+
+/* ---------- Teacher ---------- */
+async function showTeacher(){
+  document.getElementById("teacherDash").classList.remove("hidden");
+  setNav(`TEACHER • ${currentUser.email}`, true);
+  refreshSubs();
+}
+async function createAssignment(){
+  const title=document.getElementById("aTitle").value.trim();
+  const deadline=document.getElementById("aDeadline").value;
+  const numQ=parseInt(document.getElementById("aNumQ").value||"0");
+  if(!title || !deadline || !numQ) return alert("Please set title, deadline and number of questions");
+  await fetch(API+"/assignment",{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({title,deadline,numQuestions:numQ})
+  });
+  document.getElementById("aTitle").value="";
+  document.getElementById("aDeadline").value="";
+  document.getElementById("aNumQ").value="";
+  alert("Assignment added");
+  refreshSubs();
+}
+async function refreshSubs(){
+  const resA=await fetch(API+"/assignments"); const assignments=await resA.json();
+  const resS=await fetch(API+"/submissions"); const subs=await resS.json();
+
+  const host=document.getElementById("teacherSubs");
+  if(subs.length===0){
+    host.innerHTML = `<div class="assignment"><div class="title">No submissions yet</div><div class="subtle">Students haven’t uploaded any files.</div></div>`;
+    return;
+  }
+
+  let html="";
+  subs.forEach(s=>{
+    const a=assignments.find(x=>x.id===s.assignmentId); if(!a) return;
+    html+=`<div class="assignment">
+      <div class="title">${s.student} <span class="subtle">→</span> ${a.title}</div>
+      <div class="meta">
+        <span class="badge deadline">Deadline: ${a.deadline || '-'}</span>
+        <span class="badge">Questions: ${a.numQuestions}</span>
+        <span class="badge submitted">Received: ${fmtDate(s.submittedAt)}</span>
+      </div>
+
+      <div class="kv">
+        <div class="subtle">File</div>
+        <div><a class="file-link" href="javascript:void(0)">${s.filename}</a></div>
+      </div>
+
+      <div class="divider"></div>
+
+      <form onsubmit="saveMarks(event,'${s.student}',${a.id},${a.numQuestions})">
+        <label class="subtle">Question-wise Marks</label>
+        <div class="chips">`;
+    for(let i=1;i<=a.numQuestions;i++){
+      html+=`<span class="chip">Q${i}: <input id="m_${s.student}_${a.id}_${i}" type="number" min="0" style="width:70px;margin-left:6px;background:transparent;border:none;border-bottom:1px dashed var(--border);padding:2px 4px;color:var(--text) " value="${s.marks['Q'+i]||''}" /></span>`;
+    }
+    html+=`</div>
+
+        <label class="subtle" style="margin-top:10px">Grade</label>
+        <select id="g_${s.student}_${a.id}">
+          <option ${s.grade==='A'?'selected':''}>A</option>
+          <option ${s.grade==='B'?'selected':''}>B</option>
+          <option ${s.grade==='C'?'selected':''}>C</option>
+          <option ${s.grade==='D'?'selected':''}>D</option>
+          <option ${s.grade==='E'?'selected':''}>E</option>
+          <option ${s.grade==='Pending'?'selected':''}>Pending</option>
+        </select>
+
+        <label class="subtle">Feedback (visible to student)</label>
+        <textarea id="f_${s.student}_${a.id}" placeholder="Great attempt! Work on Q3 reasoning...">${s.feedback||""}</textarea>
+
+        <div class="right btn-row">
+          <button type="submit" class="btn">Save</button>
+        </div>
+      </form>
+    </div>`;
+  });
+
+  host.innerHTML = html;
+}
+
+async function saveMarks(e,student,aid,numQ){
+  e.preventDefault();
+  let marks={};
+  for(let i=1;i<=numQ;i++){
+    marks["Q"+i]=document.getElementById(`m_${student}_${aid}_${i}`).value;
+  }
+  const grade=document.getElementById(`g_${student}_${aid}`).value;
+  const feedback=document.getElementById(`f_${student}_${aid}`).value;
+  await fetch(API+"/grade",{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({student,assignmentId:aid,marks,grade,feedback})
+  });
+  alert("Saved ✅");
+  refreshSubs();
+}
+</script>
+</body>
+</html>
